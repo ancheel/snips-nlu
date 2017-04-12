@@ -22,7 +22,6 @@ class RasaNLUEngine(NLUEngine):
         self.backend = backend
         self.config_file_name = None
         self.interpreter = None
-        self.language = language.iso_code
 
     def parse(self, text):
         """
