@@ -68,8 +68,8 @@ class RasaNLUEngine(NLUEngine):
 
         training_data = transform_to_rasa_format(dataset)
         training_file_name = os.path.join(dir_name, "training_data.json")
-        with io.open(training_file_name, 'w', encoding='utf8') as f:
-            json.dumps(training_data)
+        with io.open(training_file_name, 'w') as f:
+            f.write(unicode(json.dumps(training_data, ensure_ascii=False)))
 
         config_dict = {
             "pipeline": self.backend,
@@ -79,8 +79,8 @@ class RasaNLUEngine(NLUEngine):
         }
 
         config_file_name = os.path.join(dir_name, "config.json")
-        with io.open(config_file_name, 'w', encoding='utf8') as f:
-            json.dumps(config_dict)
+        with io.open(config_file_name, 'w') as f:
+            json.dump(config_dict, f)
 
         trainer = Trainer(RasaNLUConfig(config_file_name))
         trainer.train(training_data)
