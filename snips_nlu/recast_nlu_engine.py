@@ -18,7 +18,7 @@ class RecastNLUEngine(NLUEngine):
                  REQUEST_TOKEN="20e7948d732e36470ba8471f5475d2e1"):
         super(RecastNLUEngine, self).__init__(language)
 
-        self.language = language
+        self.language = language.iso_code
         self.USER_SLUG = USER_SLUG
         self.BOT_SLUG = BOT_SLUG
         self.DEVELOPER_TOKEN = DEVELOPER_TOKEN
