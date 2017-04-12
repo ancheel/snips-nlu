@@ -12,16 +12,16 @@ from snips_nlu.utils import get_intents_and_entities
 
 
 class RecastNLUEngine(NLUEngine):
-    def __init__(self, language, is_builtin=False, USER_SLUG="choufractal",
-                 BOT_SLUG="test",
-                 DEVELOPER_TOKEN="03f4cd950c064abf42c79fc22631483e",
-                 REQUEST_TOKEN="20e7948d732e36470ba8471f5475d2e1"):
+    def __init__(self, language, is_builtin=False, user_slug="choufractal",
+                 bot_slug="test",
+                 developer_token="03f4cd950c064abf42c79fc22631483e",
+                 request_token="20e7948d732e36470ba8471f5475d2e1"):
         super(RecastNLUEngine, self).__init__(language)
 
-        self.USER_SLUG = USER_SLUG
-        self.BOT_SLUG = BOT_SLUG
-        self.DEVELOPER_TOKEN = DEVELOPER_TOKEN
-        self.REQUEST_TOKEN = REQUEST_TOKEN
+        self.user_slug = user_slug
+        self.bot_slug = bot_slug
+        self.developer_token = developer_token
+        self.request_token = request_token
         self.is_builtin = is_builtin
 
     def parse(self, text):
@@ -30,7 +30,7 @@ class RecastNLUEngine(NLUEngine):
         likely intent and slots.
         """
         res = parser(text, self.intents, self.entities,
-                     self.REQUEST_TOKEN, self.language.iso_code)
+                     self.request_token, self.language.iso_code)
 
         if len(res['intent']) == 0:
             intent_name = None
@@ -71,22 +71,22 @@ class RecastNLUEngine(NLUEngine):
 
         self.intents, self.entities = get_intents_and_entities(dataset)
         for intent in self.intents:
-            delete_intent(intent, self.USER_SLUG, self.BOT_SLUG,
-                          self.DEVELOPER_TOKEN)
-            create_intent(intent, self.USER_SLUG, self.BOT_SLUG,
-                          self.DEVELOPER_TOKEN)
+            delete_intent(intent, self.user_slug, self.bot_slug,
+                          self.developer_token)
+            create_intent(intent, self.user_slug, self.bot_slug,
+                          self.developer_token)
 
         entity_dict = {}
         for entity in self.entities:
-            entity_dict[entity] = create_entity(entity, self.USER_SLUG,
-                                                self.BOT_SLUG,
-                                                self.DEVELOPER_TOKEN)
+            entity_dict[entity] = create_entity(entity, self.user_slug,
+                                                self.bot_slug,
+                                                self.developer_token)
 
         for intent in self.intents:
             for query in dataset['intents'][intent]['utterances']:
                 if len(query['data']) != 0:
                     add_expression(query, self.is_builtin, intent, entity_dict,
-                                   self.USER_SLUG, self.BOT_SLUG,
-                                   self.DEVELOPER_TOKEN, self.language.iso_code)
+                                   self.user_slug, self.bot_slug,
+                                   self.developer_token, self.language.iso_code)
 
         return self
