@@ -30,7 +30,7 @@ class RecastNLUEngine(NLUEngine):
         likely intent and slots.
         """
         res = parser(text, self.intents, self.entities,
-                     self.REQUEST_TOKEN, self.language)
+                     self.REQUEST_TOKEN, self.language.iso_code)
 
         if len(res['intent']) == 0:
             intent_name = None
@@ -87,6 +87,6 @@ class RecastNLUEngine(NLUEngine):
                 if len(query['data']) != 0:
                     add_expression(query, self.is_builtin, intent, entity_dict,
                                    self.USER_SLUG, self.BOT_SLUG,
-                                   self.DEVELOPER_TOKEN, self.language)
+                                   self.DEVELOPER_TOKEN, self.language.iso_code)
 
         return self
