@@ -36,7 +36,7 @@ class RasaNLUEngine(NLUEngine):
         valid_slot = []
         for slot in slots:
             slot_value = slot['value']
-            slot_name = slot['name']
+            slot_name = slot['entity']
             match_range = [slot['start'], slot['end']]
 
             s = ParsedSlot(match_range, slot_value, 'whathever', slot_name)
