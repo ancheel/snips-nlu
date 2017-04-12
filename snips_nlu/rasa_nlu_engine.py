@@ -17,7 +17,7 @@ from snips_nlu.utils import transform_to_rasa_format
 
 class RasaNLUEngine(NLUEngine):
     def __init__(self, language, backend):
-        super(RasaSpacyNLUEngine, self).__init__(language)
+        super(RasaNLUEngine, self).__init__(language)
         self.backend = backend
         self.config_file_name = None
         self.interpreter = None
