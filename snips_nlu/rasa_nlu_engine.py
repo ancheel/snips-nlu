@@ -79,7 +79,7 @@ class RasaNLUEngine(NLUEngine):
         }
 
         config_file_name = os.path.join(dir_name, "config.json")
-        with io.open(config_file_name, 'w') as f:
+        with open(config_file_name, 'w') as f:
             json.dump(config_dict, f)
 
         trainer = Trainer(RasaNLUConfig(config_file_name))
