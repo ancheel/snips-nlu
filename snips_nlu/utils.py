@@ -1,5 +1,6 @@
 import base64
 import cPickle
+import copy
 import importlib
 import os
 from collections import OrderedDict, namedtuple, Mapping
@@ -153,3 +154,38 @@ def safe_pickle_dumps(obj):
 
 def safe_pickle_loads(pkl_str):
     return cPickle.loads(base64.b64decode(pkl_str))
+
+
+def transform_to_rasa_format(dataset):
+    rasa_dataset = []
+    for intent in dataset['intents']:
+        for query in dataset['intents'][intent]['utterances']:
+            text = "".join(map(lambda span: span["text"], query["data"]))
+
+            entities = []
+            current_index = 0
+            for span in query["data"]:
+                if span.get("entity", None) is not None:
+                    entities.append({
+                        "start": current_index,
+                        "end": current_index + len(span["text"]),
+                        "value": span["text"],
+                        "entity": span.get("role", span.get("entity"))
+                    })
+                current_index += len(span["text"])
+            rasa_dataset.append({
+                "text": text,
+                "intent": intent,
+                "entities": entities
+            })
+
+    rasa_dataset_without_entities = copy.deepcopy(rasa_dataset)
+    for example in rasa_dataset_without_entities:
+        del example['entities']
+
+    return {"rasa_nlu_data":
+        {
+            "entity_examples": rasa_dataset,
+            "intent_examples": rasa_dataset_without_entities
+        }
+    }
