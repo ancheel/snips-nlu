@@ -189,3 +189,17 @@ def transform_to_rasa_format(dataset):
             "intent_examples": rasa_dataset_without_entities
         }
     }
+
+
+def get_intents_and_entities(dataset):
+    intents = dataset['intents'].keys()
+
+    entities = []
+    for intent in intents:
+        for query in dataset['intents'][intent]['utterances']:
+            for span in query['data']:
+                if 'entity' in span.keys():
+                    if span['entity'] not in entities:
+                        entities.append(span['entity'])
+
+    return intents, entities
