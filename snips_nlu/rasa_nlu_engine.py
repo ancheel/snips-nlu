@@ -4,6 +4,7 @@ import os
 import shutil
 
 from rasa_nlu.config import RasaNLUConfig
+from rasa_nlu.converters import load_data
 from rasa_nlu.model import Metadata, Interpreter
 from rasa_nlu.model import Trainer
 
@@ -66,10 +67,12 @@ class RasaNLUEngine(NLUEngine):
         if not os.path.exists(dir_name):
             os.makedirs(dir_name)
 
-        training_data = transform_to_rasa_format(dataset)
+        training_data_ = transform_to_rasa_format(dataset)
         training_file_name = os.path.join(dir_name, "training_data.json")
         with io.open(training_file_name, 'w') as f:
-            f.write(unicode(json.dumps(training_data, ensure_ascii=False)))
+            f.write(unicode(json.dumps(training_data_, ensure_ascii=False)))
+
+        training_data = load_data(training_file_name)
 
         config_dict = {
             "pipeline": self.backend,
