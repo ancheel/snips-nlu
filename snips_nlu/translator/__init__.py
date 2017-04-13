@@ -1,2 +1,2 @@
-from snips_nlu.translator.apis import gcloud_translator_task, translator_task
-from . import queries_translator
+from .apis import abstract_translator, gcloud_translator, dummy_translator
+from . import assistant_translator

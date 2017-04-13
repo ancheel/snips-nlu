@@ -1,13 +1,13 @@
 from google.cloud import translate
 
-from snips_nlu.translator.apis.translator_task import TranslatorTask
+from .abstract_translator import Translator
 
 
-class GcloudTranslatorTask(TranslatorTask):
+class GcloudTranslator(Translator):
 
 	def __init__(self):
 		self.client = translate.Client()
 
 
-	def translate(self,text, source_language , target_language):
+	def translate(self, text, source_language , target_language):
 		return self.client.translate(text, target_language=target_language)['translatedText']
