@@ -4,8 +4,9 @@ from __future__ import unicode_literals
 
 from progressbar import ProgressBar
 from snips_nlu.tokenization import tokenize
+from snips_nlu.languages import Language
 from nltk.stem.snowball import SnowballStemmer
-from nltk.stem.snowball import FrenchStemmer
+#from nltk.stem.snowball import FrenchStemmer
 import HTMLParser
 import json
 from copy import deepcopy
@@ -13,6 +14,9 @@ import logging
 logger = logging.getLogger(__name__)
 handler = logging.StreamHandler()
 logger.addHandler(handler)
+
+def get_stemmer_for_language(lang):
+    return SnowballStemmer(Language.name_from_iso_code(lang))
 
 def _assemble_query(utterance):
     return "".join(part["text"] for part in utterance["data"])
@@ -39,8 +43,7 @@ class AssistantTranslator():
         self.translator = translator
         self.source_language = source_language
         self.target_language = target_language
-        #self.stemmer = SnowballStemmer(target_language)
-        self.stemmer = FrenchStemmer()
+        self.stemmer = get_stemmer_for_language(target_language)
         self.html_parser = HTMLParser.HTMLParser()
         self.translation_cache_file = translation_cache_file
         self.translation_cache = {}
