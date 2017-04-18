@@ -2,15 +2,15 @@ from enum import Enum
 
 from utils import classproperty
 
-ISO_CODE, DUCKLING_CODE = "iso", "duckling_code"
+ISO_CODE, DUCKLING_CODE, NAME = "iso", "duckling_code", "name"
 
 
 class Language(Enum):
-    EN = {ISO_CODE: u"en", DUCKLING_CODE: u"en"}
-    ES = {ISO_CODE: u"es", DUCKLING_CODE: u"es"}
-    FR = {ISO_CODE: u"fr", DUCKLING_CODE: u"fr"}
-    DE = {ISO_CODE: u"de", DUCKLING_CODE: u"de"}
-    KO = {ISO_CODE: u"ko", DUCKLING_CODE: u"ko"}
+    EN = {ISO_CODE: u"en", DUCKLING_CODE: u"en", NAME: u"english"}
+    ES = {ISO_CODE: u"es", DUCKLING_CODE: u"es", NAME: u"spanish"}
+    FR = {ISO_CODE: u"fr", DUCKLING_CODE: u"fr", NAME: u"french"}
+    DE = {ISO_CODE: u"de", DUCKLING_CODE: u"de", NAME: u"german"}
+    KO = {ISO_CODE: u"ko", DUCKLING_CODE: u"ko", NAME: u"korean"}
 
     @property
     def iso_code(self):
@@ -41,6 +41,17 @@ class Language(Enum):
             else:
                 return default
         return ent
+
+    @classmethod
+    def name_from_iso_code(cls, iso_code, default=None):
+        try:
+            ent = cls.language_by_iso_code[iso_code]
+        except KeyError:
+            if default is None:
+                raise KeyError("Unknown entity '%s'" % iso_code)
+            else:
+                return default
+        return ent.value[NAME]
 
     @classproperty
     @classmethod
