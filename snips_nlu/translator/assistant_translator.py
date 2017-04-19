@@ -11,6 +11,7 @@ from apis.systran_translator import SystranTranslator
 from apis.gcloud_translator import GcloudTranslator
 import HTMLParser
 import json
+from time import time
 from copy import deepcopy
 import logging
 logger = logging.getLogger(__name__)
@@ -33,11 +34,11 @@ def _find_in_seq_with_map(sub, seq, mapping):
 def _same_slot(el1, el2):
     return el1.get("slot_name") == el2.get("slot_name") and el1.get("entity") == el2.get("entity")
 
-def _mk_translation_backend(model_name):
+def _mk_translation_backend(model_name, authfile):
     if model_name=="google-neural" or model_name=="gn": return GcloudTranslator(model="nmt")
     if model_name=="google-phrase" or model_name=="gp": return GcloudTranslator(model="base")
-    if model_name=="systran-neural" or model_name=="sn": return SystranTranslator(model="neural")
-    if model_name=="systran-rule" or model_name=="sr": return SystranTranslator(model="rule")
+    if model_name=="systran-neural" or model_name=="sn": return SystranTranslator(authfile, model="neural")
+    if model_name=="systran-rule" or model_name=="sr": return SystranTranslator(authfile, model="rule")
     raise Exception("Unknown model {}".format(model_name))
     
 
@@ -48,8 +49,10 @@ class AssistantTranslator():
                  target_language,
                  backend=None,
                  modelname=None,
-                 translation_cache_file=None,
-                 log_level=None):
+                 authfile=None,
+                 cache=None,
+                 log_level=None,
+                 time_stats_file=None):
         
         if backend is not None and modelname is not None:
             logger.warning("Backend and model name both provided. Ignoring model name.")
@@ -57,21 +60,23 @@ class AssistantTranslator():
             logger.critical("No backend or model name provided. Aborting.")
             raise Exception("No backend or model name provided.")
         
-        self.translator = backend if backend is not None else _mk_translation_backend(modelname)
+        self.translator = backend if backend is not None else _mk_translation_backend(modelname, authfile)
         self.source_language = source_language
         self.target_language = target_language
         self.stemmer = get_stemmer_for_language(target_language)
         self.html_parser = HTMLParser.HTMLParser()
-        self.translation_cache_file = translation_cache_file
+        self.translation_cache_file = cache
         self.translation_cache = {}
+        self.time_stats_file = time_stats_file
+        self.time_stats = []
         
-        if translation_cache_file is not None:
+        if cache is not None:
             try:
-                with open(translation_cache_file, "r") as f:
-                    logger.info("Loading translation cache from '{}'".format(translation_cache_file))
+                with open(cache, "r") as f:
+                    logger.info("Loading translation cache from '{}'".format(cache))
                     self.translation_cache = json.load(f)
             except:
-                logger.warning("Could not load cache file '{}'".format(translation_cache_file))
+                logger.warning("Could not load cache file '{}'".format(cache))
         
         if log_level is not None: logger.setLevel(log_level)
 
@@ -84,8 +89,23 @@ class AssistantTranslator():
             except:
                 logger.warning("Could not write cache file '{}'".format(self.translation_cache_file))
     
+    def _save_time_stats(self):
+        if self.time_stats_file is not None:
+            with open(self.time_stats_file, "w") as f:
+                json.dump(self.time_stats, f, indent=2)
+    
     def translate_text(self, text):
-        return self.html_parser.unescape(self.translator.translate(text, self.source_language, self.target_language))
+        t_0 = time()
+        t = self.html_parser.unescape(self.translator.translate(text, self.source_language, self.target_language))
+        t_1 = time()
+        self.time_stats.append(
+            {
+                "text": text,
+                "duration": t_1 - t_0
+            }
+        )
+        logger.info("Processing time for {} characters: {}".format(len(text), t_1 - t_0))
+        return t
     
     def translate(self, phrase):
         if phrase in self.translation_cache:
@@ -194,8 +214,7 @@ class AssistantTranslator():
         logger.debug(u"Lost slots: {}".format(unassigned_slots))
         
         if len(unassigned_slots) > 0:
-            logger.info("Unassigned slots")
-            logger.info(str(unassigned_slots))
+            logger.info("Unassigned slots: " + str(unassigned_slots))
         
         return utt_t
     
@@ -226,6 +245,7 @@ class AssistantTranslator():
         assistant_t["language"] = self.target_language
         
         self._save_cache()
+        self._save_time_stats()
         
         return assistant_t
     
@@ -236,5 +256,6 @@ class AssistantTranslator():
             data_t[intent] = [ self.translate_utterance(utt) for utt in intent_data ]
 
         self._save_cache()
+        self._save_time_stats()
         
         return data_t
