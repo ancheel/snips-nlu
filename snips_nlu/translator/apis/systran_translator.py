@@ -1,3 +1,7 @@
+# -*- coding: utf-8 -*-
+
+from __future__ import unicode_literals
+
 import urllib
 import json
 
@@ -16,13 +20,13 @@ class SystranTranslator(Translator):
         translation_pair = source_language + target_language
         profile = self.configuration["profiles"][translation_pair][self.model]
         
-        url =   "{endpoint}?" \
-                "key={key}" \
-                "&source={source}" \
-                "&target={target}" \
-                "&profile={profile}" \
-                "&input={input}" \
-                "&backTranslation=False" \
+        url =   u"{endpoint}?" \
+                u"key={key}" \
+                u"&source={source}" \
+                u"&target={target}" \
+                u"&profile={profile}" \
+                u"&input={input}" \
+                u"&backTranslation=False" \
                 .format(endpoint=self.configuration["endpoint"],
                         key=self.configuration["key"],
                         source=source_language,
