@@ -1,3 +1,5 @@
+import time
+
 from api_bench.lib.intent_tools import create_entity, add_intent
 from api_bench.lib.intent_tools import delete_all_intents, delete_all_entities
 from api_bench.lib.parser_tools import parser
@@ -130,4 +132,6 @@ class ApiaiNLUEngine(NLUEngine):
             add_intent(intent, userSays, intent_parameters,
                        self.developer_token)
 
+        time.sleep(15)
+        
         return self
