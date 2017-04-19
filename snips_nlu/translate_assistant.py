@@ -6,8 +6,6 @@ import argparse
 import logging
 import json
 from translator.assistant_translator import AssistantTranslator
-from translator.apis.dummy_translator import DummyTranslator
-from translator.apis.gcloud_translator import GcloudTranslator
 
 def log_levels_mapping(verbose):
     if verbose == 0: return logging.WARNING
@@ -45,9 +43,15 @@ def save_assistant(assistant, fname):
 
 if __name__=="__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument("input", help="Assistant to translated (JSON file, required)")
+    parser.add_argument("input", help="Assistant to be translated (JSON file, required)")
     parser.add_argument("language", help="Target language (ISO code, required)")
     parser.add_argument("output", help="Where to save translated assistant (JSON file, required))")
+    parser.add_argument("-m", "--model", help="Translation model:\n"
+                                              "\tgoogle-neural or gn: Google's neural translation model (default)\n"
+                                              "\tgoogle-phrase or gp: Google's phrase based translation model\n"
+                                              "\tsystran-neural or sn: Systran's neural translation model\n"
+                                              "\tsystran-rule or sr: Systran's rule based translation model\n"
+                        )
     parser.add_argument("-c", "--cache", help="Translation cache file")
     parser.add_argument("-v", "--verbosity", action="count", default=0, help="increase verbosity")
     args = parser.parse_args()
@@ -59,11 +63,9 @@ if __name__=="__main__":
     
     assistant_s = load_assistant(args.input)
     
-    #translation_backend = DummyTranslator()
-    translation_backend = GcloudTranslator()
-    translator = AssistantTranslator(translation_backend,
-                                     get_assistant_language(assistant_s),
+    translator = AssistantTranslator(get_assistant_language(assistant_s),
                                      args.language.lower(),
+                                     args.model,
                                      args.cache,
                                      logger.getEffectiveLevel())
     

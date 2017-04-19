@@ -7,6 +7,8 @@ from snips_nlu.tokenization import tokenize
 from snips_nlu.languages import Language
 from nltk.stem.snowball import SnowballStemmer
 #from nltk.stem.snowball import FrenchStemmer
+from apis.systran_translator import SystranTranslator
+from apis.gcloud_translator import GcloudTranslator
 import HTMLParser
 import json
 from copy import deepcopy
@@ -24,23 +26,38 @@ def _assemble_query(utterance):
 def _find_in_seq_with_map(sub, seq, mapping):
     for i, _ in enumerate(seq):
         if i + len(sub) <= len(seq) and not any(mapping[i:i + len(sub)]):
-            if seq[i:i + len(sub)] == sub:
+            if seq[i : i + len(sub)] == sub:
                 return i
     return -1
 
 def _same_slot(el1, el2):
     return el1.get("slot_name") == el2.get("slot_name") and el1.get("entity") == el2.get("entity")
 
+def _mk_translation_backend(model_name):
+    if model_name=="google-neural" or model_name=="gn": return GcloudTranslator(model="nmt")
+    if model_name=="google-phrase" or model_name=="gp": return GcloudTranslator(model="base")
+    if model_name=="systran-neural" or model_name=="sn": return SystranTranslator(model="neural")
+    if model_name=="systran-rule" or model_name=="sr": return SystranTranslator(model="rule")
+    raise Exception("Unknown model {}".format(model_name))
+    
+
 class AssistantTranslator():
 
     def __init__(self,
-                 translator,
                  source_language,
                  target_language,
+                 backend=None,
+                 modelname=None,
                  translation_cache_file=None,
                  log_level=None):
         
-        self.translator = translator
+        if backend is not None and modelname is not None:
+            logger.warning("Backend and model name both provided. Ignoring model name.")
+        if backend is None and modelname is None:
+            logger.critical("No backend or model name provided. Aborting.")
+            raise Exception("No backend or model name provided.")
+        
+        self.translator = backend if backend is not None else _mk_translation_backend(modelname)
         self.source_language = source_language
         self.target_language = target_language
         self.stemmer = get_stemmer_for_language(target_language)
@@ -112,9 +129,9 @@ class AssistantTranslator():
             position = _find_in_seq_with_map(stemmed_slot, stems, slots_map)
             if position >= 0 and not any(slots_map[position:position + len(stemmed_slot)]):
                 slots_map[position:position+len(stemmed_slot)] = [ {"text": token.value,
-                                                                    "entity": slot["entity"],
-                                                                    "slot_name": slot["slot_name"],
-                                                                    "id": slot["id"]
+                                                                    "entity": slot.get("entity"),
+                                                                    "slot_name": slot.get("slot_name"),
+                                                                    "id": slot.get("id")
                                                                     }
                                                                    for token in tokenized_slot ]
             else:
@@ -155,7 +172,7 @@ class AssistantTranslator():
         slots_t = []
         
         for data in utt["data"]:
-            if "slot_name" in data:
+            if "slot_name" in data or "entity" in data:
                 data_t = deepcopy(data)
                 data_t["text"] = self.translate(data["text"])
                 slots_t.append(data_t)
@@ -211,3 +228,13 @@ class AssistantTranslator():
         self._save_cache()
         
         return assistant_t
+    
+    def translate_data(self, data):
+        
+        data_t = {}
+        for intent, intent_data in data.items():
+            data_t[intent] = [ self.translate_utterance(utt) for utt in intent_data ]
+
+        self._save_cache()
+        
+        return data_t
