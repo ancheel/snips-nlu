@@ -24,7 +24,7 @@ class ApiaiNLUEngine(NLUEngine):
         Parse the input text and returns a dictionary containing the most
         likely intent and slots.
         """
-        res = parser(text, self.developer_token, self.client_token,
+        res = parser(text, self.developer_token, self.request_token,
                      language='en')
 
         if len(res['intent']) == 0:
