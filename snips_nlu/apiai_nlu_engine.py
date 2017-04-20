@@ -132,6 +132,6 @@ class ApiaiNLUEngine(NLUEngine):
             add_intent(intent, userSays, intent_parameters,
                        self.developer_token)
 
-        time.sleep(30)
+        time.sleep(60)
 
         return self
