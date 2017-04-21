@@ -14,12 +14,19 @@ from snips_nlu.utils import (instance_to_generic_dict, instance_from_dict,
 
 _DataAugmentationConfig = namedtuple_with_defaults(
     '_DataAugmentationConfig',
-    'max_utterances noise_prob min_noise_size max_noise_size',
+    [
+        'max_utterances',
+        'noise_prob',
+        'min_noise_size',
+        'max_noise_size',
+        'entities_augmentation_ratio'
+    ],
     {
         'max_utterances': 0,
         'noise_prob': 0.,
         'min_noise_size': 0,
-        'max_noise_size': 0
+        'max_noise_size': 0,
+        'entities_augmentation_ratio': 0
     }
 )
 
@@ -36,7 +43,8 @@ class DataAugmentationConfig(_DataAugmentationConfig):
 def default_data_augmentation_config(language):
     if language == Language.EN:
         return DataAugmentationConfig(max_utterances=200, noise_prob=0.05,
-                                      min_noise_size=1, max_noise_size=3)
+                                      min_noise_size=1, max_noise_size=3,
+                                      entities_augmentation_ratio=0)
     else:
         return DataAugmentationConfig()
 

@@ -119,7 +119,8 @@ class TestDataAugmentation(unittest.TestCase):
         intent_entities = get_intent_entities(dataset, intent_name)
 
         # Then
-        it_dict = get_entities_iterators(dataset, intent_entities)
+        it_dict = get_entities_iterators(dataset, intent_entities,
+                                         augmentation_ratio=0)
 
         # When
         self.assertIn("entity1", it_dict)

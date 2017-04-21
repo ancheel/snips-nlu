@@ -9,6 +9,7 @@ from snips_nlu.constants import (UTTERANCES, DATA, ENTITY, USE_SYNONYMS,
 from snips_nlu.intent_classifier.intent_classifier_resources import \
     get_subtitles
 from snips_nlu.tokenization import tokenize
+from snips_nlu.word_embedding.word_embedding import get_most_similars
 
 
 def generate_utterance(contexts_iterator, entities_iterators, noise_iterator,
@@ -45,12 +46,15 @@ def get_contexts_iterator(intent_utterances):
     return cycle(shuffled_utterances)
 
 
-def get_entities_iterators(dataset, intent_entities):
+def get_entities_iterators(dataset, intent_entities, augmentation_ratio):
     entities_its = dict()
     for entity in intent_entities:
         if dataset[ENTITIES][entity][USE_SYNONYMS]:
             values = [s for d in dataset[ENTITIES][entity][DATA] for s in
                       d[SYNONYMS]]
+            for value in values:
+                topn = int(augmentation_ratio * len(values))
+                values += get_most_similars(value, topn)
         else:
             values = [d[VALUE] for d in dataset[ENTITIES][entity][DATA]]
         shuffled_values = np.random.permutation(values)
@@ -80,7 +84,8 @@ def get_noise_iterator(language, min_size, max_size):
 
 
 def augment_utterances(dataset, intent_name, language, max_utterances,
-                       noise_prob, min_noise_size, max_noise_size):
+                       noise_prob, min_noise_size, max_noise_size,
+                       entities_augmentation_ratio):
     utterances = dataset[INTENTS][intent_name][UTTERANCES]
     if max_utterances < len(utterances):
         return utterances
@@ -90,7 +95,8 @@ def augment_utterances(dataset, intent_name, language, max_utterances,
     noise_iterator = get_noise_iterator(language, min_noise_size,
                                         max_noise_size)
     intent_entities = get_intent_entities(dataset, intent_name)
-    entities_its = get_entities_iterators(dataset, intent_entities)
+    entities_its = get_entities_iterators(dataset, intent_entities,
+                                          entities_augmentation_ratio)
 
     while num_to_generate > 0:
         utterances.append(generate_utterance(contexts_it, entities_its,
