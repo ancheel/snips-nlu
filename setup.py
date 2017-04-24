@@ -18,6 +18,8 @@ required = [
     "pytest",
     "enum34==1.1.6",
     "mock",
+    "pattern==2.6",
+    "python-levenshtein==0.12.0",
     "numpy==1.12.1",
     "scipy==0.19.0",
     "scikit-learn==0.18.1",
@@ -50,3 +52,4 @@ setup(name=PACKAGE_NAME,
       entry_points={},
       include_package_data=True,
       zip_safe=False)
+
