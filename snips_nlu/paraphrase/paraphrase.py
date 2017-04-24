@@ -18,7 +18,7 @@ PARAPHRASE_TAGS = {
 
 def get_paraphrases(text, language, topn_similarity=10,
                     max_levenshtein_ratio=0.8, min_similarity=0.8, limit=None):
-    if topn_similarity <= 0:
+    if topn_similarity <= 0 or limit == 0:
         return []
     tokens = tokenize_light(text)
     tags = get_pos_tags(tokens, language)
@@ -47,7 +47,7 @@ def get_paraphrases(text, language, topn_similarity=10,
         if similar_text_words != tokens:
             similar_text = ' '.join(similar_text_words)
             paraphrases.append(similar_text)
-    paraphrases = shuffle(paraphrases)
+    shuffle(paraphrases)
     if limit is not None:
         return paraphrases[:limit]
     return paraphrases

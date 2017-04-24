@@ -2,6 +2,7 @@ import unittest
 
 from mock import patch
 
+from snips_nlu.constants import DATA, TEXT
 from snips_nlu.dataset import validate_and_format_dataset
 from snips_nlu.languages import Language
 from snips_nlu.slot_filler.data_augmentation import (
@@ -17,14 +18,17 @@ class TestDataAugmentation(unittest.TestCase):
     @patch("numpy.random.permutation", side_effect=np_random_permutation)
     def test_context_iterator(self, _):
         # Given
-        seq = range(3)
+        u0 = {DATA: [{TEXT: "0"}]}
+        u1 = {DATA: [{TEXT: "1"}]}
+        u2 = {DATA: [{TEXT: "2"}]}
+        utterances = [u0, u1, u2]
 
         # When
-        it = get_contexts_iterator(seq)
+        it = get_contexts_iterator(utterances, Language.EN, augmentation_ratio=0)
         context = [next(it) for _ in xrange(5)]
 
         # Then
-        self.assertEqual(context, [0, 1, 2, 0, 1])
+        self.assertEqual(context, [u0, u1, u2, u0, u1])
 
     @patch("numpy.random.permutation", side_effect=np_random_permutation)
     def test_entities_iterators(self, _):
@@ -119,7 +123,7 @@ class TestDataAugmentation(unittest.TestCase):
         intent_entities = get_intent_entities(dataset, intent_name)
 
         # Then
-        it_dict = get_entities_iterators(dataset, intent_entities,
+        it_dict = get_entities_iterators(dataset, Language.EN, intent_entities,
                                          augmentation_ratio=0)
 
         # When

@@ -19,14 +19,14 @@ _DataAugmentationConfig = namedtuple_with_defaults(
         'noise_prob',
         'min_noise_size',
         'max_noise_size',
-        'entities_augmentation_ratio'
+        'paraphrasing_factor'
     ],
     {
         'max_utterances': 0,
         'noise_prob': 0.,
         'min_noise_size': 0,
         'max_noise_size': 0,
-        'entities_augmentation_ratio': 0
+        'paraphrasing_factor': 0
     }
 )
 
@@ -44,7 +44,7 @@ def default_data_augmentation_config(language):
     if language == Language.EN:
         return DataAugmentationConfig(max_utterances=200, noise_prob=0.05,
                                       min_noise_size=1, max_noise_size=3,
-                                      entities_augmentation_ratio=0)
+                                      paraphrasing_factor=0)
     else:
         return DataAugmentationConfig()
 
