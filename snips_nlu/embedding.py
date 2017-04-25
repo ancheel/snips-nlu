@@ -16,7 +16,12 @@ class Embedding():
         query_part_1 = "&".join( [ urllib.urlencode( { "ws1": token } ) for token in arg1 ] )
         query_part_2 = "&".join( [ urllib.urlencode( { "ws2": token } ) for token in arg2 ] )
         
-        url = self.endpoint + "?" + query_part_1 + "&" + query_part_2
+        url = self.endpoint\
+              + "/n_similarity"\
+              + "?"\
+              + query_part_1\
+              + "&"\
+              + query_part_2
         
         result = float(urllib.urlopen(url).read())
         
