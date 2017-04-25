@@ -1,0 +1,12 @@
+{
+	"en": {
+		"url": "http://localhost",
+		"port": "5000",
+		"uri": "/word2vec"
+	},
+	"fr": {
+		"url": "http://localhost",
+		"port": "5001",
+		"uri": "/word2vec"
+	}
+}
