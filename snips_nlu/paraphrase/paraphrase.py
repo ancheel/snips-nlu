@@ -17,7 +17,8 @@ PARAPHRASE_TAGS = {
 
 
 def get_paraphrases(text, language, topn_similarity=10,
-                    max_levenshtein_ratio=0.8, min_similarity=0.8, limit=None):
+                    max_levenshtein_ratio=0.8, min_similarity=0.8,
+                    filter_pos_tag=False, limit=None):
     if topn_similarity <= 0 or limit == 0:
         return []
     tokens = tokenize_light(text)
@@ -25,7 +26,7 @@ def get_paraphrases(text, language, topn_similarity=10,
     synonyms_per_word = []
     for token, tag in tags:
         synonyms = [token]
-        if tag in PARAPHRASE_TAGS:
+        if not filter_pos_tag or tag in PARAPHRASE_TAGS:
             similar_words = get_most_similar(positives=[token],
                                              topn=topn_similarity)
             synonyms += [

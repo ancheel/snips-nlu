@@ -52,6 +52,7 @@ def get_contexts_iterator(intent_utterances, language, augmentation_ratio):
             if ENTITY not in chunk:
                 paraphrases = get_paraphrases(chunk[TEXT],
                                               language=language,
+                                              filter_pos_tag=True,
                                               limit=augmentation_ratio)
                 paraphrased_chunks += [{TEXT: p} for p in paraphrases]
             augmented_chunks.append(paraphrased_chunks)
@@ -81,7 +82,8 @@ def get_entities_iterators(dataset, language, intent_entities,
             augmented_values = []
             for value in values:
                 limit = int(augmentation_ratio)
-                augmented_values += get_paraphrases(value, language, limit)
+                augmented_values += get_paraphrases(value, language, limit,
+                                                    filter_pos_tag=False)
             values += augmented_values
 
         shuffled_values = np.random.permutation(values)
