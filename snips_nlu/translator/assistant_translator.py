@@ -160,6 +160,8 @@ class AssistantTranslator():
         for i, token in enumerate(tokens):
             if slots_map[i] is None:
                 slots_map[i] = { "text": token.value }
+            else:
+                slots_map[i]["text"] = token.value
         
         # merge sequences of tokens of same type
         utt = [ slots_map[0] ]
