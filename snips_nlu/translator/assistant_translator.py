@@ -34,11 +34,11 @@ def _find_in_seq_with_map(sub, seq, mapping):
 def _same_slot(el1, el2):
     return el1.get("slot_name") == el2.get("slot_name") and el1.get("entity") == el2.get("entity")
 
-def _mk_translation_backend(model_name, authfile):
-    if model_name=="google-neural" or model_name=="gn": return GcloudTranslator(model="nmt")
-    if model_name=="google-phrase" or model_name=="gp": return GcloudTranslator(model="base")
-    if model_name=="systran-neural" or model_name=="sn": return SystranTranslator(authfile, model="neural")
-    if model_name=="systran-rule" or model_name=="sr": return SystranTranslator(authfile, model="rule")
+def _mk_translation_backend(model_name, authfile, logger):
+    if model_name=="google-neural" or model_name=="gn": return GcloudTranslator(model="nmt", logger=logger)
+    if model_name=="google-phrase" or model_name=="gp": return GcloudTranslator(model="base", logger=logger)
+    if model_name=="systran-neural" or model_name=="sn": return SystranTranslator(authfile, model="neural", logger=logger)
+    if model_name=="systran-rule" or model_name=="sr": return SystranTranslator(authfile, model="rule", logger=logger)
     raise Exception("Unknown model {}".format(model_name))
     
 
@@ -53,6 +53,9 @@ class AssistantTranslator():
                  cache=None,
                  log_level=None,
                  time_stats_file=None):
+    
+        if log_level is not None:
+            logger.setLevel(log_level)
         
         if backend is not None and modelname is not None:
             logger.warning("Backend and model name both provided. Ignoring model name.")
@@ -60,7 +63,7 @@ class AssistantTranslator():
             logger.critical("No backend or model name provided. Aborting.")
             raise Exception("No backend or model name provided.")
         
-        self.translator = backend if backend is not None else _mk_translation_backend(modelname, authfile)
+        self.translator = backend if backend is not None else _mk_translation_backend(modelname, authfile, logger)
         self.source_language = source_language
         self.target_language = target_language
         self.stemmer = get_stemmer_for_language(target_language)
@@ -78,8 +81,6 @@ class AssistantTranslator():
             except:
                 logger.warning("Could not load cache file '{}'".format(cache))
         
-        if log_level is not None: logger.setLevel(log_level)
-
     def _save_cache(self):
         if self.translation_cache_file is not None:
             logger.info("Saving translation cache to '{}'".format(self.translation_cache_file))
@@ -135,7 +136,6 @@ class AssistantTranslator():
         return match
 
     def _map_stemmed_slots(self, text, slots):
-        utt = []
         unassigned_slots = []
 
         tokens = tokenize(text)
