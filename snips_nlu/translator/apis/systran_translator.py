@@ -5,7 +5,6 @@ from __future__ import unicode_literals
 import urllib
 import json
 import time
-import unicodedata
 
 from .abstract_translator import Translator
 
