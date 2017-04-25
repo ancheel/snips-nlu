@@ -5,10 +5,12 @@ from __future__ import unicode_literals
 
 import argparse
 import logging
+import json
 from os import getenv
 from os.path import join
 from translator.assistant_translator import AssistantTranslator
 from translate_data import load_data, save_data
+from embedding import Embedding
 
 def log_levels_mapping(verbose):
     if verbose==0: return logging.WARNING
@@ -29,10 +31,12 @@ def error(msg, code=1):
 
 if __name__=="__main__":
     default_systran_auth = join(getenv("HOME"), ".systran", "auth.json")
+    default_embedding_config = "embedding_config.json"
     parser = argparse.ArgumentParser(formatter_class=argparse.RawTextHelpFormatter)
     parser.add_argument("input", help="Data to be translated (JSON file, required). Output will be written to <filename>_<model>_<s>_<t>_<s>.json")
     parser.add_argument("source_language", help="Source language (ISO code, required)")
     parser.add_argument("pivot_language", help="Pivot language (ISO code, required)")
+    parser.add_argument("--embedding", default=default_embedding_config, help="Embedding server configuration file (default: {})".format(default_embedding_config))
     parser.add_argument("--auth", default=default_systran_auth, help="Auth file (default: {})".format(default_systran_auth))
     parser.add_argument("-c", "--cache", help="Translation cache directory")
     parser.add_argument("-m", "--model", help= "Translation model:\n"
@@ -53,9 +57,39 @@ if __name__=="__main__":
     s = args.source_language.lower()
     t = args.pivot_language.lower()
     
+    embedding_config = None
+    if args.embedding is not None and args.embedding.lower() not in [ "-", "", "null", "none", "0", "/dev/null" ]:
+        try:
+            with open(args.embedding) as f:
+                embedding_config = json.load(f)
+        except:
+            logger.warning("Could not load embedding configuration from '{}'. No embedding.".format(args.embedding))
+
+    source_embedding = None
+    target_embedding = None
+    if embedding_config is not None:
+        try:
+            source_embedding_endpoint = embedding_config[s]["url"]\
+                                        + ":"\
+                                        + embedding_config[s]["port"]\
+                                        + embedding_config[s]["resource"]
+            source_embedding = Embedding(source_embedding_endpoint)
+        except:
+            logger.warning("Invalid embedding configuration for '{}'".format(s))
+        try:
+            target_embedding_endpoint = embedding_config[t]["url"]\
+                                        + ":"\
+                                        + embedding_config[t]["port"]\
+                                        + embedding_config[t]["resource"]
+            target_embedding = Embedding(target_embedding_endpoint)
+        except:
+            logger.warning("Invalid embedding configuration for '{}'".format(t))
+        
+    
     T_forth = AssistantTranslator(s,
                                   t,
                                   modelname=args.model,
+                                  target_embedding=target_embedding,
                                   authfile=args.auth,
                                   cache=join(args.cache,
                                             "cache_{}_{}_{}.json".format(args.model,
@@ -72,6 +106,7 @@ if __name__=="__main__":
     T_back = AssistantTranslator(t,
                                  s,
                                  modelname=args.model,
+                                 target_embedding=source_embedding,
                                  authfile=args.auth,
                                  cache=join(args.cache,
                                             "cache_{}_{}_{}.json".format(args.model,
