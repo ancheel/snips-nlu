@@ -23,6 +23,6 @@ class Embedding():
               + "&"\
               + query_part_2
         
-        result = float(urllib.urlopen(url).read())
+        result = float(urllib.urlopen(url.lower()).read())
         
         return result
