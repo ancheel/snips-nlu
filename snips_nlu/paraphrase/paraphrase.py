@@ -1,83 +1,184 @@
-import importlib
-from copy import copy
-from random import shuffle
+# coding=utf-8
+from __future__ import unicode_literals
 
-from Levenshtein import ratio
-from pattern.text import penntreebank2universal, NOUN, ADJ, NUM, INTJ
+import operator
+from random import choice
 
-from snips_nlu.paraphrase.word_embedding import get_most_similar
-from snips_nlu.tokenization import tokenize_light
+import Levenshtein
+import spacy
+from nltk.corpus import wordnet as wn
+from pattern.en import singularize, pluralize
 
-PARAPHRASE_TAGS = {
-    ADJ,
-    INTJ,
-    NOUN,
-    NUM
-}
+from snips_nlu.constants import TEXT, SLOT_NAME
+from snips_nlu.dataset import get_text_from_chunks
 
+NOUN = "NOUN"
+ADV = "ADV"
+PROPN = "PROPN"
+ADJ = "ADJ"
 
-def get_paraphrases(text, language, topn_similarity=10,
-                    max_levenshtein_ratio=0.8, min_similarity=0.8,
-                    filter_pos_tag=False, limit=None):
-    if topn_similarity <= 0 or limit == 0:
-        return []
-    tokens = tokenize_light(text)
-    tags = get_pos_tags(tokens, language)
-    synonyms_per_word = []
-    for token, tag in tags:
-        synonyms = [token]
-        if not filter_pos_tag or tag in PARAPHRASE_TAGS:
-            similar_words = get_most_similar(positives=[token],
-                                             topn=topn_similarity)
-            synonyms += [
-                s['word'] for s in similar_words
-                if s['similarity'] >= min_similarity
-                   and ratio(s['word'], token.lower()) <= max_levenshtein_ratio
-                   and len(s['word'].split()) == 1
-            ]
-        synonyms_per_word.append(synonyms)
+WN_ADJ, WN_ADV, WN_NOUN = 'a', 'r', 'n'
 
-    lattice_indices = _generate_lattice_indices(map(len, synonyms_per_word))
+WORDNET = "wordnet"
+EMBEDDING = "embedding"
 
-    paraphrases = []
-    for indices in lattice_indices:
-        similar_text_words = []
-        for i, index in enumerate(indices):
-            synonym = synonyms_per_word[i][index]
-            similar_text_words.append(synonym)
-        if similar_text_words != tokens:
-            similar_text = ' '.join(similar_text_words)
-            paraphrases.append(similar_text)
-    shuffle(paraphrases)
-    if limit is not None:
-        return paraphrases[:limit]
-    return paraphrases
+TAGS_TO_PARAPHRASE = {ADJ, NOUN, ADV, PROPN}
+
+SPACY_TO_WORDNET_POS = {ADJ: WN_ADJ, NOUN: WN_NOUN, ADV: WN_ADV,
+                        PROPN: WN_NOUN}
+
+print "Loading Spacy..."
+nlp = spacy.load("en")
+print "Loaded Spacy"
+
+WORDNET_CACHE = dict()
 
 
-def get_pos_tags(tokens, language):
-    try:
-        pattern_module = importlib.import_module(
-            'pattern.text.%s' % language.iso_code)
-    except ImportError:
-        return [(token, None) for token in tokens]
-    tag = getattr(pattern_module, 'tag')
-    tags = tag(tokens, tokenize=False)
-    universal_tags = [penntreebank2universal(token, pos)
-                      for token, pos in tags]
-    return universal_tags
+def identity(x):
+    return x
 
 
-def _generate_lattice_indices(lengths):
-    indices = [[0 for _ in range(len(lengths))]]
-    final_indices = [length - 1 for length in lengths]
-    while indices[-1] != final_indices:
-        last_indices = indices[-1]
-        updated_indices = copy(last_indices)
-        for i, index in enumerate(last_indices):
-            if index + 1 < lengths[i]:
-                updated_indices[i] = index + 1
-                break
+def title(x):
+    return x.title()
+
+
+def upper(x):
+    return x.upper()
+
+
+def get_similar(token):
+    pos = SPACY_TO_WORDNET_POS[token.pos_]
+    key = (token.orth, pos)
+
+    if key not in WORDNET_CACHE:
+        word_synsets = wn.synsets(token.norm_, pos)
+        if len(word_synsets) == 0:
+            WORDNET_CACHE[key] = []
+            return WORDNET_CACHE[key]
+        is_plural = singularize(token.orth_) != token.orth_
+        pluralize_fn = pluralize if is_plural else identity
+        if token.orth_.istitle():
+            upper_fn = title
+        elif token.orth_.istitle():
+            upper_fn = upper
+        else:
+            upper_fn = identity
+        reshape_fn = lambda x: pluralize_fn(upper_fn(x))
+        # TODO: should we consider more synsets
+        word_synset = word_synsets[0]
+        variants_with_similarity = [
+            (reshape_fn(" ".join(unicode(lemma.name()).split("_"))), 1.0)
+            for lemma in word_synset.lemmas()]
+        variants = word_synset.hyponyms()
+        for v in variants:
+            sim = word_synset.path_similarity(v)
+            variants_with_similarity += [
+                (reshape_fn(" ".join(unicode(lemma.name()).split("_"))), sim)
+                for lemma in v.lemmas()]
+        WORDNET_CACHE[key] = sorted(variants_with_similarity,
+                                    key=operator.itemgetter(1),
+                                    reverse=True)
+    return WORDNET_CACHE[key]
+
+
+def get_utterance_paraphrase(utterance_data, max_levenshtein_ratio=0.95,
+                             min_similarity=0.5,
+                             pos_to_paraphrase=TAGS_TO_PARAPHRASE):
+    chunk_slot_name_ranges = []
+    current_index = 0
+    for chunk in utterance_data:
+        end = current_index + len(chunk[TEXT])
+        if SLOT_NAME in chunk:
+            chunk_slot_name_ranges.append(
+                ((current_index, end), chunk[SLOT_NAME]))
+        current_index = end
+    doc = nlp(get_text_from_chunks(utterance_data))
+    in_noun_chunk = [range(chunk.start, chunk.end)
+                     for chunk in doc.noun_chunks]
+    in_noun_chunk = set(i for r in in_noun_chunk for i in r)
+    paraphrased_utterance_data = []
+    for i, token in enumerate(doc):
+        token_start = token.idx
+        token_end = token.idx + len(token)
+        if i in in_noun_chunk:
+            if token.pos_ in pos_to_paraphrase:
+                token_lowered = token.orth_.lower()
+                most_similars = get_similar(token)
+                most_similar_orths = set([w[0] for w in most_similars
+                                          if w[1] > min_similarity])
+                similar_with_variations = []
+                for s in most_similar_orths:
+                    s_lowered = s.lower()
+                    if Levenshtein.ratio(token_lowered,
+                                         s_lowered) < max_levenshtein_ratio:
+                        similar_with_variations.append(s)
+                if len(similar_with_variations) > 0:
+                    similar = choice(similar_with_variations[:3])
+                    paraphrased_token = similar
+                else:
+                    paraphrased_token = token.orth_
             else:
-                updated_indices[i] = 0
-        indices.append(updated_indices)
-    return indices
+                paraphrased_token = token.orth_
+        else:
+            paraphrased_token = token.orth_
+        is_in_slot = False
+        for ((start, end), slot_name) in chunk_slot_name_ranges:
+            if token_start >= start and token_end <= end:
+                if len(paraphrased_utterance_data) == 0:
+                    paraphrased_utterance_data.append(
+                        {TEXT: paraphrased_token, SLOT_NAME: slot_name})
+                else:
+                    previous_chunk = paraphrased_utterance_data[-1]
+                    if SLOT_NAME in previous_chunk and \
+                                    previous_chunk[SLOT_NAME] == slot_name:
+                        previous_chunk[TEXT] += " %s" % paraphrased_token
+                    else:
+                        paraphrased_utterance_data.append(
+                            {TEXT: paraphrased_token, SLOT_NAME: slot_name})
+                is_in_slot = True
+                break
+        if not is_in_slot:
+            if len(paraphrased_utterance_data) == 0:
+                paraphrased_utterance_data.append({TEXT: paraphrased_token})
+            else:
+                previous_chunk = paraphrased_utterance_data[-1]
+                if SLOT_NAME in previous_chunk:
+                    paraphrased_utterance_data.append(
+                        {TEXT: paraphrased_token})
+                else:
+                    previous_chunk[TEXT] += " %s" % paraphrased_token
+    return paraphrased_utterance_data
+
+
+def get_paraphrase(text, max_levenshtein_ratio=0.95,
+                   min_similarity=0.5, pos_to_paraphrase=TAGS_TO_PARAPHRASE):
+    doc = nlp(text)
+    current_index = 0
+    paraphrased = ""
+    for chunk in doc.noun_chunks:
+        if chunk.start_char > current_index:
+            paraphrased += text[current_index:chunk.start_char]
+        paraphrased_chunk = []
+        for token in chunk:
+            if token.pos_ in pos_to_paraphrase:
+                token_lowered = token.orth_.lower()
+                most_similars = get_similar(token)
+                most_similar_orths = set([w[0] for w in most_similars
+                                          if w[1] > min_similarity])
+                similar_with_variations = []
+                for s in most_similar_orths:
+                    s_lowered = s.lower()
+                    if Levenshtein.ratio(token_lowered,
+                                         s_lowered) < max_levenshtein_ratio:
+                        similar_with_variations.append(s)
+                if len(similar_with_variations) > 0:
+                    similar = choice(similar_with_variations[:3])
+                    paraphrased_chunk.append(similar)
+                else:
+                    paraphrased_chunk.append(token.orth_)
+            else:
+                paraphrased_chunk.append(token.orth_)
+        paraphrased += " ".join(paraphrased_chunk)
+        current_index = chunk.end_char
+    paraphrased += text[current_index:]
+    return paraphrased

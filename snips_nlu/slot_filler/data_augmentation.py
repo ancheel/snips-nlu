@@ -10,7 +10,8 @@ from snips_nlu.constants import (UTTERANCES, DATA, ENTITY, USE_SYNONYMS,
 from snips_nlu.dataset import get_text_from_chunks
 from snips_nlu.intent_classifier.intent_classifier_resources import \
     get_subtitles
-from snips_nlu.paraphrase.paraphrase import get_paraphrases
+from snips_nlu.paraphrase.paraphrase import get_utterance_paraphrase, \
+    get_paraphrase
 from snips_nlu.tokenization import tokenize
 
 
@@ -46,24 +47,12 @@ def generate_utterance(contexts_iterator, entities_iterators, noise_iterator,
 def get_contexts_iterator(intent_utterances, language, augmentation_ratio):
     augmented_utterances = []
     for utterance in intent_utterances:
-        augmented_chunks = []
-        for chunk in utterance[DATA]:
-            paraphrased_chunks = [chunk]
-            if ENTITY not in chunk:
-                paraphrases = get_paraphrases(chunk[TEXT],
-                                              language=language,
-                                              filter_pos_tag=True,
-                                              limit=augmentation_ratio)
-                paraphrased_chunks += [{TEXT: p} for p in paraphrases]
-            augmented_chunks.append(paraphrased_chunks)
+        paraphrased_utterance_data = get_utterance_paraphrase(utterance[DATA])
         utterance_text = get_text_from_chunks(utterance[DATA])
-        for i in range(augmentation_ratio):
-            utterance_data = [chunks[i if i < len(chunks) else 0]
-                              for chunks in augmented_chunks]
-            augmented_utterance_text = get_text_from_chunks(utterance_data)
-            if augmented_utterance_text != utterance_text:
-                augmented_utterances.append({DATA: utterance_data})
-
+        augmented_utterance_text = get_text_from_chunks(
+            paraphrased_utterance_data)
+        if augmented_utterance_text != utterance_text:
+            augmented_utterances.append({DATA: paraphrased_utterance_data})
     shuffled_utterances = np.random.permutation(
         intent_utterances + augmented_utterances)
     return cycle(shuffled_utterances)
@@ -78,14 +67,11 @@ def get_entities_iterators(dataset, language, intent_entities,
                       d[SYNONYMS]]
         else:
             values = [d[VALUE] for d in dataset[ENTITIES][entity][DATA]]
+        paraphrases = []
         if dataset[ENTITIES][entity][AUTOMATICALLY_EXTENSIBLE]:
-            augmented_values = []
             for value in values:
-                limit = int(augmentation_ratio)
-                augmented_values += get_paraphrases(value, language, limit,
-                                                    filter_pos_tag=False)
-            values += augmented_values
-
+                paraphrases.append(get_paraphrase(value))
+        values += paraphrases
         shuffled_values = np.random.permutation(values)
         entities_its[entity] = cycle(shuffled_values)
     return entities_its
