@@ -72,7 +72,7 @@ if __name__=="__main__":
             source_embedding_endpoint = embedding_config[s]["url"]\
                                         + ":"\
                                         + embedding_config[s]["port"]\
-                                        + embedding_config[s]["resource"]
+                                        + embedding_config[s]["uri"]
             source_embedding = Embedding(source_embedding_endpoint)
         except:
             logger.warning("Invalid embedding configuration for '{}'".format(s))
@@ -80,7 +80,7 @@ if __name__=="__main__":
             target_embedding_endpoint = embedding_config[t]["url"]\
                                         + ":"\
                                         + embedding_config[t]["port"]\
-                                        + embedding_config[t]["resource"]
+                                        + embedding_config[t]["uri"]
             target_embedding = Embedding(target_embedding_endpoint)
         except:
             logger.warning("Invalid embedding configuration for '{}'".format(t))
