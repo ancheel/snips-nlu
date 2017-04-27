@@ -13,10 +13,21 @@ import HTMLParser
 import json
 from time import time
 from copy import deepcopy
+from collections import namedtuple
+import numpy
 import logging
 logger = logging.getLogger(__name__)
 handler = logging.StreamHandler()
 logger.addHandler(handler)
+
+ObjectWithRange = namedtuple("ObjectWithRange", "value start end")
+
+def _extract_subsequences_with_range(l):
+    subsequences = []
+    for i in range(len(l)):
+        for j in range(i, len(l)):
+            subsequences.append(ObjectWithRange(l[i:j+1], i, j+1))
+    return subsequences
 
 def get_stemmer_for_language(lang):
     return SnowballStemmer(Language.name_from_iso_code(lang))
@@ -30,6 +41,22 @@ def _find_in_seq_with_map(sub, seq, mapping):
             if seq[i : i + len(sub)] == sub:
                 return i
     return -1
+
+def _find_best_match_with_map(to_match, candidates, scoring, mapping):
+    sorted_scores_with_pos = sorted(
+        zip(
+            range(len(candidates)),
+            [ scoring(to_match, candidate.value) for candidate in candidates ]
+        ),
+        key=lambda el: el[1]
+    )
+    
+    while len(sorted_scores_with_pos) > 0:
+        best_match = sorted_scores_with_pos.pop()
+        if not not any(mapping[best_match.start:best_match.end]):
+            return best_match.start, best_match.end
+
+    return -1, -1
 
 def _same_slot(el1, el2):
     return el1.get("slot_name") == el2.get("slot_name") and el1.get("entity") == el2.get("entity")
@@ -49,6 +76,7 @@ class AssistantTranslator():
                  target_language,
                  backend=None,
                  modelname=None,
+                 target_embedding=None,
                  authfile=None,
                  cache=None,
                  log_level=None,
@@ -66,6 +94,7 @@ class AssistantTranslator():
         self.translator = backend if backend is not None else _mk_translation_backend(modelname, authfile, logger)
         self.source_language = source_language
         self.target_language = target_language
+        self.target_embedding = target_embedding
         self.stemmer = get_stemmer_for_language(target_language)
         self.html_parser = HTMLParser.HTMLParser()
         self.translation_cache_file = cache
@@ -135,6 +164,69 @@ class AssistantTranslator():
                     match = False
         return match
 
+    def _map_slots_with_embedding(self, text, slots):
+        if self.target_embedding is None:
+            logger.critical("No available embedding")
+            raise Exception("No available embedding")
+        
+        unassigned_slots = []
+        tokens = tokenize(text)
+        token_sequences = sorted(_extract_subsequences_with_range(tokens), key=lambda l: len(l), reverse=True)
+        slots_map = [ None ] * len(tokens)
+        tokenized_slots = [ tokenize(slot["text"]) for slot in sorted(slots, key=lambda el: len(el["text"]), reverse=True) ]
+        
+        # slot_max_scores = [
+        #     max(
+        #         zip(
+        #             range(len(token_sequences)),
+        #             [ self.target_embedding.similarity(slot, seq) for seq in token_sequences ]
+        #         ),
+        #         key=lambda el: el[1] )
+        #     for slot in tokenized_slots
+        # ]
+        #
+        #
+
+        # matching_scores = numpy.array(
+        #     [[0.] * len(token_sequences)] * len(tokenized_slots),
+        #     dtype=float
+        # )
+        # for i, slot in enumerate(tokenized_slots):
+        #     for j, seq in enumerate(token_sequences):
+        #         matching_scores[i][j] = self.target_embedding.similarity(slot, seq.value)
+
+        # map stemmed slots to positions in stemmed tokenized text
+        for tokenized_slot in tokenized_slots:
+            start, end = _find_best_match_with_map(slot, token_sequences, self.target_embedding.similarity, slots_map)
+            
+            if (start, end) != (-1, -1):
+                slots_map[start:end] = [
+                    {
+                    "entity": slot.get("entity"),
+                    "slot_name": slot.get("slot_name"),
+                    "id": slot.get("id")
+                    }
+                ] * (end - start)
+                
+            else:
+                unassigned_slots.append(slot)
+
+        for i, token in enumerate(tokens):
+            if slots_map[i] is None:
+                slots_map[i] = {"text": token.value}
+            else:
+                slots_map[i]["text"] = token.value
+
+        # merge sequences of tokens of same type
+        utt = [slots_map[0]]
+        for token in slots_map[1:]:
+            if _same_slot(utt[-1], token):
+                utt[-1]["text"] += " "+token["text"]
+            else:
+                utt.append(token)
+
+        return utt, unassigned_slots
+
     def _map_stemmed_slots(self, text, slots):
         unassigned_slots = []
 
@@ -174,13 +266,16 @@ class AssistantTranslator():
         return utt, unassigned_slots
 
     def _map_slots(self, text, slots):
-        utt, unassigned_slots = self._map_stemmed_slots(text, slots)
+        utt, unassigned_slots = self._map_slots_with_embedding(text, slots)
+        # utt, unassigned_slots = self._map_stemmed_slots(text, slots)
         
         # add spaces before and after text parts that aren't slots
         for i, part in enumerate(utt):
             if "entity" not in part and "slot_name" not in part:
-                if i>0:               part["text"] = " "+part["text"]
-                if i<len(utt)-1:    part["text"] = part["text"]+" "
+                if i>0:
+                    part["text"] = " "+part["text"]
+                if i<len(utt)-1:
+                    part["text"] = part["text"]+" "
         
         # set ranges in translated query
         offset = 0
