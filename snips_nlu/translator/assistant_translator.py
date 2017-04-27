@@ -52,8 +52,8 @@ def _find_best_match_with_map(to_match, candidates, scoring, mapping):
     )
     
     while len(sorted_scores_with_pos) > 0:
-        best_match = sorted_scores_with_pos.pop()
-        if not not any(mapping[best_match.start:best_match.end]):
+        best_match = candidates[sorted_scores_with_pos.pop()[0]]
+        if not any(mapping[best_match.start:best_match.end]):
             return best_match.start, best_match.end
 
     return -1, -1
@@ -170,7 +170,7 @@ class AssistantTranslator():
             raise Exception("No available embedding")
         
         unassigned_slots = []
-        tokens = tokenize(text)
+        tokens = [ token.value for token in tokenize(text) ]
         token_sequences = sorted(_extract_subsequences_with_range(tokens), key=lambda l: len(l), reverse=True)
         slots_map = [ None ] * len(tokens)
         tokenized_slots = [ tokenize(slot["text"]) for slot in sorted(slots, key=lambda el: len(el["text"]), reverse=True) ]
@@ -196,8 +196,11 @@ class AssistantTranslator():
         #         matching_scores[i][j] = self.target_embedding.similarity(slot, seq.value)
 
         # map stemmed slots to positions in stemmed tokenized text
-        for tokenized_slot in tokenized_slots:
-            start, end = _find_best_match_with_map(slot, token_sequences, self.target_embedding.similarity, slots_map)
+        for slot, tokenized_slot in zip(slots, tokenized_slots):
+            start, end = _find_best_match_with_map( [ tok.value for tok in tokenized_slot ],
+                                                    token_sequences,
+                                                    self.target_embedding.similarity,
+                                                    slots_map)
             
             if (start, end) != (-1, -1):
                 slots_map[start:end] = [
@@ -209,13 +212,13 @@ class AssistantTranslator():
                 ] * (end - start)
                 
             else:
-                unassigned_slots.append(slot)
+                unassigned_slots.append(tokenized_slot)
 
         for i, token in enumerate(tokens):
             if slots_map[i] is None:
-                slots_map[i] = {"text": token.value}
+                slots_map[i] = {"text": token}
             else:
-                slots_map[i]["text"] = token.value
+                slots_map[i]["text"] = token
 
         # merge sequences of tokens of same type
         utt = [slots_map[0]]
