@@ -77,6 +77,8 @@ class AssistantTranslator():
                  backend=None,
                  modelname=None,
                  target_embedding=None,
+                 source_stopwords=None,
+                 target_stopwords=None,
                  authfile=None,
                  cache=None,
                  log_level=None,
@@ -95,6 +97,8 @@ class AssistantTranslator():
         self.source_language = source_language
         self.target_language = target_language
         self.target_embedding = target_embedding
+        self.source_stopwords = source_stopwords if source_stopwords is not None else []
+        self.target_stopwords = target_stopwords if target_stopwords is not None else []
         self.stemmer = get_stemmer_for_language(target_language)
         self.html_parser = HTMLParser.HTMLParser()
         self.translation_cache_file = cache
@@ -164,6 +168,59 @@ class AssistantTranslator():
                     match = False
         return match
 
+    def _extract_prefix_by_length_ignoring_stopwords(self, sequence, length):
+        candidate = []
+        count = 0
+        for w in sequence:
+            if count == length:
+                return candidate
+            candidate.append(w)
+            if w not in self.target_stopwords:
+                count += 1
+        return candidate
+    
+    def _length_without_stopwords(self, sequence):
+        return len(self._remove_stopwords_from_sequence(sequence))
+    
+    def _remove_stopwords_from_sequence(self, sequence):
+        return [ w for w in sequence if w not in self.target_stopwords ]
+    
+    def _find_best_1to1_match_with_map(self, slot, query, scoring, mapping):
+        
+        slot_without_stopwords = self._remove_stopwords_from_sequence(slot)
+        len_slots_without_stopwords = len(slot_without_stopwords)
+        
+        scores = []
+        for i in range(len(query)):
+            candidate = self._extract_prefix_by_length_ignoring_stopwords(query[i:], len_slots_without_stopwords)
+            if self._length_without_stopwords(candidate) < len_slots_without_stopwords:
+                scores.append((i, -99, candidate))
+            else:
+                scores.append(
+                    (
+                        i,
+                        sum(
+                            [
+                                self.target_embedding.similarity([x], [y])
+                                for x, y in zip(
+                                slot_without_stopwords,
+                                self._remove_stopwords_from_sequence(candidate)
+                            )
+                            ]
+                        ),
+                        candidate
+                    )
+                )
+        
+        sorted_scores_with_pos = sorted(scores, key=lambda el: el[1])
+    
+        while len(sorted_scores_with_pos) > 0:
+            best_pos, _, best_candidate = sorted_scores_with_pos.pop()
+            if not any(mapping[best_pos:best_pos+len(best_candidate)]):
+                return best_pos, best_pos+len(best_candidate)
+    
+        return -1, -1
+    
     def _map_slots_with_embedding(self, text, slots):
         if self.target_embedding is None:
             logger.critical("No available embedding")
@@ -205,11 +262,12 @@ class AssistantTranslator():
             if (start, end) != (-1, -1):
                 slots_map[start:end] = [
                     {
-                    "entity": slot.get("entity"),
-                    "slot_name": slot.get("slot_name"),
-                    "id": slot.get("id")
+                        "entity": slot.get("entity"),
+                        "slot_name": slot.get("slot_name"),
+                        "id": slot.get("id")
                     }
-                ] * (end - start)
+                    for _ in range(start, end)
+                ]
                 
             else:
                 unassigned_slots.append(tokenized_slot)
@@ -224,7 +282,7 @@ class AssistantTranslator():
         utt = [slots_map[0]]
         for token in slots_map[1:]:
             if _same_slot(utt[-1], token):
-                utt[-1]["text"] += " "+token["text"]
+                utt[-1]["text"] += " " + token["text"]
             else:
                 utt.append(token)
 
@@ -268,8 +326,54 @@ class AssistantTranslator():
         
         return utt, unassigned_slots
 
+    def _map_slots_1to1_with_embedding(self, text, slots):
+        if self.target_embedding is None:
+            logger.critical("No available embedding")
+            raise Exception("No available embedding")
+    
+        unassigned_slots = []
+        tokens = [token.value for token in tokenize(text)]
+        slots_map = [None] * len(tokens)
+        tokenized_slots = [ [ tok.value for tok in tokenize(slot["text"]) ] for slot in
+                           sorted(slots, key=lambda el: len(el["text"]), reverse=True)]
+    
+        # map stemmed slots to positions in stemmed tokenized text
+        for slot, tokenized_slot in zip(slots, tokenized_slots):
+            start, end = self._find_best_1to1_match_with_map(tokenized_slot,
+                                                             tokens,
+                                                             self.target_embedding.similarity,
+                                                             slots_map)
+        
+            if (start, end) != (-1, -1):
+                slots_map[start:end] = [
+                    {
+                        "entity": slot.get("entity"),
+                        "slot_name": slot.get("slot_name"),
+                        "id": slot.get("id")
+                    }
+                    for _ in range(start, end)
+                ]
+            else:
+                unassigned_slots.append(tokenized_slot)
+        for i, token in enumerate(tokens):
+            if slots_map[i] is None:
+                slots_map[i] = { "text": token }
+            else:
+                slots_map[i]["text"] = token
+        
+        # merge sequences of tokens of same type
+        utt = [slots_map[0]]
+        for token in slots_map[1:]:
+            if _same_slot(utt[-1], token):
+                utt[-1]["text"] += " "+token["text"]
+            else:
+                utt.append(token)
+        
+        return utt, unassigned_slots
+    
     def _map_slots(self, text, slots):
-        utt, unassigned_slots = self._map_slots_with_embedding(text, slots)
+        utt, unassigned_slots = self._map_slots_1to1_with_embedding(text, slots)
+        # utt, unassigned_slots = self._map_slots_with_embedding(text, slots)
         # utt, unassigned_slots = self._map_stemmed_slots(text, slots)
         
         # add spaces before and after text parts that aren't slots
