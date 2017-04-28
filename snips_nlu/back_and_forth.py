@@ -28,6 +28,10 @@ def error(msg, code=1):
     logger.error(msg)
     exit(code)
 
+def _load_json(fname):
+    with open(fname) as f:
+        return json.load(f)
+
 
 if __name__=="__main__":
     default_systran_auth = join(getenv("HOME"), ".systran", "auth.json")
@@ -36,6 +40,8 @@ if __name__=="__main__":
     parser.add_argument("input", help="Data to be translated (JSON file, required). Output will be written to <filename>_<model>_<s>_<t>_<s>.json")
     parser.add_argument("source_language", help="Source language (ISO code, required)")
     parser.add_argument("pivot_language", help="Pivot language (ISO code, required)")
+    parser.add_argument("--source-stopwords", help="Source language stopwords list")
+    parser.add_argument("--pivot-stopwords", help="Pivot language stopwords list")
     parser.add_argument("--embedding", default=default_embedding_config, help="Embedding server configuration file (default: {})".format(default_embedding_config))
     parser.add_argument("--auth", default=default_systran_auth, help="Auth file (default: {})".format(default_systran_auth))
     parser.add_argument("-c", "--cache", help="Translation cache directory")
@@ -86,10 +92,16 @@ if __name__=="__main__":
             logger.warning("Invalid embedding configuration for '{}'".format(t))
         
     
+    source_stopwords = _load_json(args.source_stopwords) if args.source_stopwords is not None else None
+    pivot_stopwords =  _load_json(args.pivot_stopwords) if args.pivot_stopwords is not None else None
+    
+    
     T_forth = AssistantTranslator(s,
                                   t,
                                   modelname=args.model,
                                   target_embedding=target_embedding,
+                                  source_stopwords=source_stopwords,
+                                  target_stopwords=pivot_stopwords,
                                   authfile=args.auth,
                                   cache=join(args.cache,
                                             "cache_{}_{}_{}.json".format(args.model,
@@ -107,6 +119,8 @@ if __name__=="__main__":
                                  s,
                                  modelname=args.model,
                                  target_embedding=source_embedding,
+                                 source_stopwords=pivot_stopwords,
+                                 target_stopwords=source_stopwords,
                                  authfile=args.auth,
                                  cache=join(args.cache,
                                             "cache_{}_{}_{}.json".format(args.model,
