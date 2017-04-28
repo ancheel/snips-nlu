@@ -77,4 +77,7 @@ class SystranTranslator(Translator):
         url = self._mk_query_url(text, source_language, target_language)
         result = self._query_service(url)
         if result is None: return None
-        return "\n".join( [ res["output"] for res in result["outputs"] ] )
+        try:
+            return "\n".join( [ res["output"] for res in result["outputs"] ] )
+        except:
+            raise Exception("Incorrect reply by Systran: {}".format(str(result)))
