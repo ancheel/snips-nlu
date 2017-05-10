@@ -72,7 +72,7 @@ class ApiaiNLUEngine(NLUEngine):
 
         # create entities
         mapping_builtin = {
-            'timeRange': '@sys.date-time',
+            'snips/datetime': '@sys.date-time',
             'city': '@sys.geo-city-us',
             'country': '@sys.geo-country',
             'state': '@sys.geo-state-us', 
