@@ -71,14 +71,17 @@ class ApiaiNLUEngine(NLUEngine):
         delete_all_entities(self.developer_token)
 
         # create entities
-        mapping_meta = {
-            'timeRange': ['@sys.date-time', '@sys.date-time'],
-            'location': ['@sys.location', '@sys.location'],
-            'action': ['@action', 'action']
+        mapping_builtin = {
+            'timeRange': '@sys.date-time',
+            'city': '@sys.geo-city-us',
+            'country': '@sys.geo-country',
+            'state': '@sys.geo-state-us', 
+            'artist': '@sys.music-artist', 
+            'genre': '@sys.music-genre', 
         }
 
         for entity in self.entities:
-            if entity not in ['timeRange', 'location']:
+            if entity not in mapping_builtin:
                 automatedExpansion = dataset['entities'][entity][
                     'automatically_extensible']
                 create_entity(entity, automatedExpansion, self.developer_token)
@@ -93,14 +96,24 @@ class ApiaiNLUEngine(NLUEngine):
                     if 'entity' in span:
                         if span['entity'] not in seen_entities:
                             seen_entities.append(span['entity'])
-                        to_add.append(
-                            {
-                                'text': span['text'],
-                                'alias': span['slot_name'],
-                                'meta': mapping_meta[span['entity']][0],
-                                'userDefined': True
-                            }
-                        )
+                        if span['entity'] in mapping_builtin:
+                            to_add.append( 
+                                {
+                                    'text': span['text'], 
+                                    'alias': span['slot_name'],
+                                    'meta': mapping_builtin[span['entity']],
+                                    'userDefined': True 
+                                }
+                            )
+                        else:
+                            to_add.append( 
+                                {
+                                    'text': span['text'], 
+                                    'alias': span['slot_name'],
+                                    'meta': '@'+span['entity'],
+                                    'userDefined': True 
+                                }
+                            )
                     else:
                         to_add.append({'text': span['text']})
                 userSays.append(
@@ -120,18 +133,29 @@ class ApiaiNLUEngine(NLUEngine):
                 }
             ]
             for entity in seen_entities:
-                intent_parameters[0]['parameters'].append(
-                    {
-                        'name': entity,
-                        'dataType': mapping_meta[entity][1],
-                        'value': "$" + entity,
-                        'auto': True,
-                        'isList': True
-                    }
-                )
+                if entity in mapping_builtin:
+                    intent_parameters[0]['parameters'].append(
+                        {
+                            "name": entity,
+                            "dataType": mapping_builtin[entity],
+                            "value": "$"+entity,
+                            "auto": True,
+                            "isList": True
+                        }
+                    )
+                else:
+                    intent_parameters[0]['parameters'].append(
+                        {
+                            "name": entity,
+                            "dataType": "@"+entity,
+                            "value": "$"+entity,
+                            "auto": True,
+                            "isList": True
+                        }
+                    )
             add_intent(intent, userSays, intent_parameters,
                        self.developer_token)
 
-        time.sleep(60)
+        time.sleep(90)
 
         return self
