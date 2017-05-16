@@ -69,11 +69,11 @@ class LuisNLUEngine(NLUEngine):
         self.intents, self.entities = get_intents_and_entities(dataset)
 
         # reinitialize agent
-        delete_all(appId, versionId, token)
+        delete_all(self.appId, self.versionId, self.token)
 
         # create intent and entities
         for intent in self.intents:
-            create_intent(intent, appId, versionId, token)
+            create_intent(intent, self.appId, self.versionId, self.token)
 
         mapping_builtin = {
             'timeRange': 'datetimeV2'
@@ -81,10 +81,10 @@ class LuisNLUEngine(NLUEngine):
 
         for entity in self.entities:
             if entity not in mapping_builtin:
-                create_entity(entity, appId, versionId, token)
+                create_entity(entity, self.appId, self.versionId, self.token)
             else:
                 entity_builtin = mapping_builtin[entity]
-                create_entity_builtin(entity_builtin, appId, versionId, token)
+                create_entity_builtin(entity_builtin, self.appId, self.versionId, self.token)
 
         # dumping labelled queries
         userSays = []
