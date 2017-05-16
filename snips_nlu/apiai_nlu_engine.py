@@ -1,6 +1,6 @@
 import time
 
-from api_bench.lib.intent_tools import create_entity, add_intent
+from api_bench.lib.intent_tools import create_entity, add_intent, train_model
 from api_bench.lib.intent_tools import delete_all_intents, delete_all_entities
 from api_bench.lib.parser_tools import parser
 
@@ -66,96 +66,41 @@ class ApiaiNLUEngine(NLUEngine):
 
         self.intents, self.entities = get_intents_and_entities(dataset)
 
-        # reinitialize agent
-        delete_all_intents(self.developer_token)
-        delete_all_entities(self.developer_token)
+        isTraining = True
+        count = 0
+        while count < 4:
+            count += 1
+            if isTraining:
+                # reinitialize agent
+                delete_all_intents(self.developer_token)
+                delete_all_entities(self.developer_token)
 
-        # create entities
-        mapping_builtin = {
-            'snips/datetime': '@sys.date-time',
-            'city': '@sys.geo-city-us',
-            'country': '@sys.geo-country',
-            'state': '@sys.geo-state-us', 
-            'artist': '@sys.music-artist', 
-            'genre': '@sys.music-genre', 
-        }
-
-        for entity in self.entities:
-            if entity not in mapping_builtin:
-                automatedExpansion = dataset['entities'][entity][
-                    'automatically_extensible']
-                create_entity(entity, automatedExpansion, self.developer_token)
-
-        for intent in self.intents:
-            # create UserSays
-            userSays = []
-            seen_entities = []
-            for query in dataset['intents'][intent]['utterances']:
-                to_add = []
-                for span in query['data']:
-                    if 'entity' in span:
-                        if span['entity'] not in seen_entities:
-                            seen_entities.append(span['entity'])
-                        if span['entity'] in mapping_builtin:
-                            to_add.append( 
-                                {
-                                    'text': span['text'], 
-                                    'alias': span['slot_name'],
-                                    'meta': mapping_builtin[span['entity']],
-                                    'userDefined': True 
-                                }
-                            )
-                        else:
-                            to_add.append( 
-                                {
-                                    'text': span['text'], 
-                                    'alias': span['slot_name'],
-                                    'meta': '@'+span['entity'],
-                                    'userDefined': True 
-                                }
-                            )
-                    else:
-                        to_add.append({'text': span['text']})
-                userSays.append(
-                    {
-                        'data': to_add,
-                        'isTemplate': False,
-                        'count': 0
-                    }
-                )
-
-            # creates intent_parameters
-            intent_parameters = [
-                {
-                    "resetContexts": False,
-                    "affectedContexts": [],
-                    "parameters": []
+                # create entities
+                mapping_builtin = {
+                    'snips/datetime': '@sys.date-time',
+                    'city': '@sys.geo-city-us',
+                    'country': '@sys.geo-country',
+                    'state': '@sys.geo-state-us',
+                    'artist': '@sys.music-artist',
+                    'genre': '@sys.music-genre',
                 }
-            ]
-            for entity in seen_entities:
-                if entity in mapping_builtin:
-                    intent_parameters[0]['parameters'].append(
-                        {
-                            "name": entity,
-                            "dataType": mapping_builtin[entity],
-                            "value": "$"+entity,
-                            "auto": True,
-                            "isList": True
-                        }
-                    )
-                else:
-                    intent_parameters[0]['parameters'].append(
-                        {
-                            "name": entity,
-                            "dataType": "@"+entity,
-                            "value": "$"+entity,
-                            "auto": True,
-                            "isList": True
-                        }
-                    )
-            add_intent(intent, userSays, intent_parameters,
-                       self.developer_token)
 
-        time.sleep(90)
+                for entity in self.entities:
+                    if entity not in mapping_builtin:
+                        automatedExpansion = dataset['entities'][entity][
+                            'automatically_extensible']
+                        create_entity(entity, automatedExpansion,
+                                      self.developer_token)
+
+                for intent in self.intents:
+                    add_intent(intent, mapping_builtin,
+                               dataset['intents'][intent]['utterances'],
+                               self.developer_token)
+
+                isTraining = train_model(developer_token)
+
+            else:
+                print 'training complete!'
+                break
 
         return self
