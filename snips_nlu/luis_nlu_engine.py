@@ -3,7 +3,7 @@ import re
 
 from luis_bench.lib.intent_tools import add_examples, train_model, publish_app
 from luis_bench.lib.intent_tools import delete_all, create_intent, \
-    create_entity
+    create_entity, create_entity_builtin
 from luis_bench.lib.parser_tools import parser
 
 from dataset import validate_and_format_dataset
