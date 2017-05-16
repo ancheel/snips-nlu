@@ -1,4 +1,6 @@
 import time
+import re
+
 from luis_bench.lib.intent_tools import add_examples, train_model, publish_app
 from luis_bench.lib.intent_tools import delete_all, create_intent, \
     create_entity
@@ -84,7 +86,8 @@ class LuisNLUEngine(NLUEngine):
                 create_entity(entity, self.appId, self.versionId, self.token)
             else:
                 entity_builtin = mapping_builtin[entity]
-                create_entity_builtin(entity_builtin, self.appId, self.versionId, self.token)
+                create_entity_builtin(entity_builtin, self.appId,
+                                      self.versionId, self.token)
 
         # dumping labelled queries
         userSays = []
