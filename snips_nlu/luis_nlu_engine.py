@@ -12,13 +12,13 @@ from snips_nlu.result import Result
 from snips_nlu.utils import get_intents_and_entities
 
 
-class ApiaiNLUEngine(NLUEngine):
+class LuisNLUEngine(NLUEngine):
     def __init__(self, language,
                  token="1ed49ac5bb5742f7a3b9d783ae5948c9",
                  appId="1117a29b-5f7a-45ba-98c8-5cb665427a55",
                  versionId="1.0"):
 
-        super(ApiaiNLUEngine, self).__init__(language)
+        super(LuisNLUEngine, self).__init__(language)
 
         self.token = token
         self.appId = appId
