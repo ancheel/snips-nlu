@@ -97,7 +97,7 @@ class ApiaiNLUEngine(NLUEngine):
                                dataset['intents'][intent]['utterances'],
                                self.developer_token)
 
-                isTraining = train_model(developer_token)
+                isTraining = train_model(self.developer_token)
 
             else:
                 print 'training complete!'
