@@ -99,8 +99,19 @@ class ApiaiNLUEngine(NLUEngine):
                        dataset['intents'][intent]['utterances'],
                        self.developer_token)
 
-        isTraining = train_model(intent_dict)
+        isTraining = True
+        count = 0
+        while count < 5:
+            count += 1
+            if isTraining:
+                isTraining = train_model(intent_dict)
+            else:
+                print 'Training complete!'
+                break
 
+        if isTraining:
+            print  'Could not train agent after 4 tries'
+            
         #    # else:
         #    #     print 'training complete!'
         #    #     break
