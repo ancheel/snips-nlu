@@ -66,41 +66,43 @@ class ApiaiNLUEngine(NLUEngine):
 
         self.intents, self.entities = get_intents_and_entities(dataset)
 
-        isTraining = True
-        count = 0
-        while count < 4:
-            count += 1
-            if isTraining:
-                # reinitialize agent
-                delete_all_intents(self.developer_token)
-                delete_all_entities(self.developer_token)
+        # isTraining = True
+        # count = 0
+        # while count < 4:
+        #     count += 1
+        #     if isTraining:
 
-                # create entities
-                mapping_builtin = {
-                    'snips/datetime': '@sys.date-time',
-                    'city': '@sys.geo-city-us',
-                    'country': '@sys.geo-country',
-                    'state': '@sys.geo-state-us',
-                    'artist': '@sys.music-artist',
-                    'genre': '@sys.music-genre',
-                }
+        # reinitialize agent
+        delete_all_intents(self.developer_token)
+        delete_all_entities(self.developer_token)
 
-                for entity in self.entities:
-                    if entity not in mapping_builtin:
-                        automatedExpansion = dataset['entities'][entity][
-                            'automatically_extensible']
-                        create_entity(entity, automatedExpansion,
-                                      self.developer_token)
+        # create entities
+        mapping_builtin = {
+            'snips/datetime': '@sys.date-time',
+            'city': '@sys.geo-city-us',
+            'country': '@sys.geo-country',
+            'state': '@sys.geo-state-us',
+            'artist': '@sys.music-artist',
+            'genre': '@sys.music-genre',
+        }
 
-                for intent in self.intents:
-                    add_intent(intent, mapping_builtin,
-                               dataset['intents'][intent]['utterances'],
-                               self.developer_token)
+        for entity in self.entities:
+            if entity not in mapping_builtin:
+                automatedExpansion = dataset['entities'][entity][
+                    'automatically_extensible']
+                create_entity(entity, automatedExpansion,
+                              self.developer_token)
 
-                isTraining = train_model(self.developer_token)
+        intent_dict = dict()
+        for intent in self.intents:
+            intent_dict[intent] = add_intent(intent, mapping_builtin,
+                       dataset['intents'][intent]['utterances'],
+                       self.developer_token)
 
-            else:
-                print 'training complete!'
-                break
+        isTraining = train_model(intent_dict)
+
+        #    # else:
+        #    #     print 'training complete!'
+        #    #     break
 
         return self
