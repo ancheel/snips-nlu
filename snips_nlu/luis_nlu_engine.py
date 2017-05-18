@@ -4,7 +4,7 @@ import re
 from luis_bench.lib.intent_tools import add_examples, train_model, publish_app
 from luis_bench.lib.intent_tools import delete_all, create_intent, \
     create_entity, create_entity_builtin
-from luis_bench.lib.parser_tools import parser_sdk
+from luis_bench.lib.parser_tools import parser
 
 from dataset import validate_and_format_dataset
 from snips_nlu.nlu_engine import NLUEngine
@@ -31,7 +31,7 @@ class LuisNLUEngine(NLUEngine):
         Parse the input text and returns a dictionary containing the most
         likely intent and slots.
         """
-        res = parser_sdk(text, self.appId, self.token)
+        res = parser(text, self.appId, self.token)
 
         if len(res['intent']) == 0:
             intent_name = None
