@@ -16,8 +16,8 @@ from snips_nlu.utils import get_intents_and_entities
 
 class LuisNLUEngine(NLUEngine):
     def __init__(self, language,
-                 token="1ed49ac5bb5742f7a3b9d783ae5948c9",
-                 appId="1117a29b-5f7a-45ba-98c8-5cb665427a55",
+                 token="455f187204f34e90818bb47d47b9a5cc",
+                 appId="5a169895-560e-4e35-90ab-301ca9f39222",
                  versionId="1.0"):
 
         super(LuisNLUEngine, self).__init__(language)
