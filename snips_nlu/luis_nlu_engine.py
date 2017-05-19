@@ -1,6 +1,5 @@
-import time
 import re
-
+import time
 from luis_bench.lib.intent_tools import add_examples, train_model, publish_app
 from luis_bench.lib.intent_tools import delete_all, create_intent, \
     create_entity, create_entity_builtin
@@ -31,7 +30,7 @@ class LuisNLUEngine(NLUEngine):
         Parse the input text and returns a dictionary containing the most
         likely intent and slots.
         """
-        res = parser(text, self.appId, self.token)
+        res = parser(text, self.endpointUrl, self.client_token)
 
         if len(res['intent']) == 0:
             intent_name = None
@@ -127,6 +126,8 @@ class LuisNLUEngine(NLUEngine):
 
         # train model
         train_model(self.appId, self.versionId, self.token)
-        publish_app(self.appId, self.versionId, self.token)
+        self.endpointUrl, self.client_token = publish_app(self.appId,
+                                                          self.versionId,
+                                                          self.token)
 
         return self
