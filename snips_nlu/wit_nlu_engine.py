@@ -33,7 +33,8 @@ class WitNLUEngine(NLUEngine):
         else:
             intent_name = res['intent']['slug']
             prob = res['intent']['confidence']
-            slots = res['entities']
+
+        slots = res['entities']
 
         intent_res = IntentClassificationResult(intent_name, prob)
 
