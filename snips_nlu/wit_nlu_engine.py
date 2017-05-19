@@ -14,7 +14,7 @@ from snips_nlu.utils import get_intents_and_entities
 
 class WitNLUEngine(NLUEngine):
     def __init__(self, language,
-                 token="8979154f948648e0b67c3f5b13a742f4"):
+                 token="SFESSIABQ4K6BBVCABK7OAAMDSCVD2T2"):
         super(WitNLUEngine, self).__init__(language)
 
         self.token = token
