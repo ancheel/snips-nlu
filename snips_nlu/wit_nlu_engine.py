@@ -29,7 +29,7 @@ class WitNLUEngine(NLUEngine):
         if len(res['intent']) == 0:
             intent_name = None
             prob = None
-            slots = []
+            #slots = []
         else:
             intent_name = res['intent']['slug']
             prob = res['intent']['confidence']
