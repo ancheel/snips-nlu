@@ -30,7 +30,8 @@ class LuisNLUEngine(NLUEngine):
         Parse the input text and returns a dictionary containing the most
         likely intent and slots.
         """
-        res = parser(text, self.endpointUrl, self.client_token)
+        res = parser(text.encode('utf8').strip(), self.endpointUrl,
+                     self.client_token)
 
         if len(res['intent']) == 0:
             intent_name = None
