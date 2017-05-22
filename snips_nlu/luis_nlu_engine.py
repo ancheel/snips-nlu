@@ -17,20 +17,22 @@ class LuisNLUEngine(NLUEngine):
     def __init__(self, language,
                  token="455f187204f34e90818bb47d47b9a5cc",
                  appId="5a169895-560e-4e35-90ab-301ca9f39222",
-                 versionId="1.0"):
+                 versionId="1.0",
+                 client_token="27449308f4354af082dcfae269b322e5"):
 
         super(LuisNLUEngine, self).__init__(language)
 
         self.token = token
         self.appId = appId
         self.versionId = versionId
+        self.client_token = client_token
 
     def parse(self, text):
         """
         Parse the input text and returns a dictionary containing the most
         likely intent and slots.
         """
-        res = parser(text.encode('utf8').strip(), self.endpointUrl,
+        res = parser(text.encode('utf8').strip(), self.appId,
                      self.client_token)
 
         if len(res['intent']) == 0:
@@ -127,8 +129,6 @@ class LuisNLUEngine(NLUEngine):
 
         # train model
         train_model(self.appId, self.versionId, self.token)
-        self.endpointUrl, self.client_token = publish_app(self.appId,
-                                                          self.versionId,
-                                                          self.token)
+        publish_app(self.appId, self.versionId, self.token)
 
         return self
