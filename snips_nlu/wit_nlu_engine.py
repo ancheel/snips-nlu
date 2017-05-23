@@ -88,4 +88,6 @@ class WitNLUEngine(NLUEngine):
         if not isTrained:
             print 'Could not train agent after 30 tries'
 
+        time.sleep(60)
+
         return self

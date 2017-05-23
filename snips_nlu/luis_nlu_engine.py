@@ -131,4 +131,6 @@ class LuisNLUEngine(NLUEngine):
         train_model(self.appId, self.versionId, self.token)
         publish_app(self.appId, self.versionId, self.token)
 
+        time.sleep(60)
+
         return self

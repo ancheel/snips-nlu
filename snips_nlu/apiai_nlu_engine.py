@@ -116,4 +116,6 @@ class ApiaiNLUEngine(NLUEngine):
         #    #     print 'training complete!'
         #    #     break
 
+        time.sleep(60)
+
         return self
