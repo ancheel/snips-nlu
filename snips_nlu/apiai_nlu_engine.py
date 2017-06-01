@@ -14,8 +14,8 @@ from snips_nlu.utils import get_intents_and_entities
 
 class ApiaiNLUEngine(NLUEngine):
     def __init__(self, language,
-                 developer_token="8979154f948648e0b67c3f5b13a742f4",
-                 request_token="10b5dbbd709a4b9196a74d0d500716bb"):
+                 developer_token="3ce5004ac51144b1aac7a29c1b3b55db",
+                 request_token="e7da6de4051d48519e9329f4ddfea20c"):
         super(ApiaiNLUEngine, self).__init__(language)
 
         self.developer_token = developer_token
