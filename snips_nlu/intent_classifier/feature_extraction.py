@@ -62,7 +62,9 @@ def deserialize_tfidf_vectorizer(vectorizer_dict, language):
     return tfidf_vectorizer
 
 
-CLUSTER_USED_PER_LANGUAGES = {}
+CLUSTER_USED_PER_LANGUAGES = {
+    Language.ZH: "brown_clusters"
+}
 
 
 class Featurizer(object):

@@ -6,6 +6,8 @@ from nlu_utils import (tokenize as _tokenize,
                        tokenize_light as _tokenize_light,
                        normalize)
 
+from snips_nlu.languages import Language
+
 JIEBA_TOKENIZER = Tokenizer()
 
 
@@ -42,13 +44,24 @@ class Token(object):
 
 
 def tokenize(string, language):
-    tokens = [Token(value=token["value"],
-                    start=token["char_range"]["start"],
-                    end=token["char_range"]["end"])
-              for token in _tokenize(string, language.iso_code)]
+    if language == Language.ZH:
+        if not isinstance(string, unicode):
+            string = string.decode("utf8")
+        jiebla_tokens = JIEBA_TOKENIZER.tokenize(string)
+        tokens = [Token(value=value, start=start, end=end)
+                  for value, start, end in jiebla_tokens
+                  if value.strip() not in language.punctuation]
+    else:
+        tokens = [Token(value=token["value"],
+                        start=token["char_range"]["start"],
+                        end=token["char_range"]["end"])
+                  for token in _tokenize(string, language.iso_code)]
     return tokens
 
 
 def tokenize_light(string, language):
-    tokenized_string = _tokenize_light(string, language.iso_code)
+    if language == Language.ZH:
+        tokenized_string = [t.value for t in tokenize(string, language)]
+    else:
+        tokenized_string = _tokenize_light(string, language.iso_code)
     return tokenized_string
