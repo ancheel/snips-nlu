@@ -320,3 +320,8 @@ class TestSnipsIntentClassifier(unittest.TestCase):
         joined_noise = " ".join(noise)
         for u in noise_utterances:
             self.assertEqual(u, joined_noise)
+
+    def test_should_use_classification_threshold(self):
+        # Given
+
+        pass

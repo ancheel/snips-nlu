@@ -78,7 +78,8 @@ class FeaturizerConfig(_FeaturizerConfig, FromDictMixin,
 
 _IntentClassifierConfig = namedtuple_with_defaults(
     '_IntentClassifierConfig',
-    'data_augmentation_config featurizer_config log_reg_args',
+    'data_augmentation_config featurizer_config log_reg_args '
+    'classification_threshold',
     {
         'data_augmentation_config':
             IntentClassifierDataAugmentationConfig(
@@ -92,7 +93,8 @@ _IntentClassifierConfig = namedtuple_with_defaults(
                 "random_state": 42,
                 "n_jobs": -1
             },
-        'featurizer_config': FeaturizerConfig()
+        'featurizer_config': FeaturizerConfig(),
+        'classification_threshold': 0.
     }
 )
 

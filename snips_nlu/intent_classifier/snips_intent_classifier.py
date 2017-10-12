@@ -151,7 +151,7 @@ class SnipsIntentClassifier(object):
         intent_name = self.intent_list[int(predicted)]
         prob = proba_vect[0][int(predicted)]
 
-        if intent_name is None:
+        if intent_name is None or prob < self.config.classification_threshold:
             return None
 
         return IntentClassificationResult(intent_name, prob)
