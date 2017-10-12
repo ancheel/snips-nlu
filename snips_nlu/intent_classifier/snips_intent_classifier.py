@@ -1,5 +1,6 @@
 from __future__ import unicode_literals
 
+import operator
 from itertools import izip, cycle
 from uuid import uuid4
 
@@ -146,12 +147,23 @@ class SnipsIntentClassifier(object):
 
         X = self.featurizer.transform([text])
         proba_vect = self.classifier.predict_proba(X)
-        predicted = np.argmax(proba_vect[0])
+
+        sorted_preds = sorted([(i, p) for i, p in enumerate(proba_vect)],
+                              key=operator.itemgetter(1), reverse=True)
+
+        if len(sorted_preds) >= 2:
+            predicted, predicted_prob = sorted_preds[0]
+            _, second_predicted_prob = sorted_preds[1]
+            delta = predicted_prob - second_predicted_prob
+            if delta < self.config.classification_threshold:
+                return None
+        else:
+            predicted = np.argmax(proba_vect[0])
 
         intent_name = self.intent_list[int(predicted)]
         prob = proba_vect[0][int(predicted)]
 
-        if intent_name is None or prob < self.config.classification_threshold:
+        if intent_name is None:
             return None
 
         return IntentClassificationResult(intent_name, prob)
